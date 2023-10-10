@@ -2,16 +2,79 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define SIMPLE_DB_VERSION "1.0"
 #define BUFFER_SIZE 256
 
+typedef enum {
+    STATEMENT_GET,
+    STATEMENT_SET,
+    STATEMENT_DELETE
+} StatementType;
+
+typedef enum { 
+    PREPARE_SUCCESS, 
+    PREPARE_UNRECOGNIZED_STATEMENT,
+    PREPARE_SYNTAX_ERROR
+} PrepareResult;
 typedef struct {
     char command[BUFFER_SIZE];
 } Command;
 
+typedef struct {
+    StatementType type;
+    int32_t key;
+    int32_t value;
+} Statement;
+
 void print_prompt() {
     printf("SimpleDB > ");
+}
+PrepareResult parse_command(Command* cmd,Statement* statement){
+  char* keyword = strtok(cmd->command, " ");
+  char* key = strtok(NULL, " ");
+  char* value = strtok(NULL, " ");
+
+  if(keyword == NULL || key == NULL || value == NULL){
+    return PREPARE_SYNTAX_ERROR;
+  }  
+
+  int32_t int_key = atoi(key);
+  int32_t int_value = atoi(key);
+
+  statement->key = int_key;
+  statement->value = int_value;
+  return PREPARE_SUCCESS;  
+}
+PrepareResult prepare_statement(Command* cmd,Statement* statement){
+    PrepareResult parse_result = parse_command(cmd,statement);
+    if(parse_result!=PREPARE_SUCCESS){
+       return parse_result; 
+    }
+    if (strncmp(cmd->command, "GET", 3) == 0) {
+        statement->type = STATEMENT_GET;
+        return PREPARE_SUCCESS;
+    }
+    if (strncmp(cmd->command, "SET",3) == 0) {
+        statement->type = STATEMENT_SET;
+        return PREPARE_SUCCESS;
+    }
+    if (strncmp(cmd->command,"DELETE",6) == 0){
+        statement->type = STATEMENT_DELETE;
+        return PREPARE_SUCCESS;
+    }
+    return PREPARE_UNRECOGNIZED_STATEMENT;
+}
+void execute_statement(Statement* statement){
+    if (statement->type == STATEMENT_SET) {
+            printf("SET: %d : %d\n",statement->key,statement->value);
+    } else if (statement->type == STATEMENT_GET) {
+            printf("GET: %d\n",statement->key);
+    } else if (statement->type == STATEMENT_DELETE) {
+            printf("DELETE: %d\n", statement->key);
+    } 
+    return;
 }
 
 void read_command(Command* cmd) {
@@ -24,21 +87,26 @@ void read_command(Command* cmd) {
 }
 
 int main(int argc, char* argv[]) {
-    printf("SimpleDB version %s starting..\n",SIMPLE_DB_VERSION);
+    printf("SimpleDB version %s starting...\n",SIMPLE_DB_VERSION);
     while (true) {
         print_prompt();
-        Command cmd;
-        read_command(&cmd);
+        Command* cmd = malloc(sizeof(Command));
+        read_command(cmd);
 
-        if (strcmp(cmd.command, "get") == 0) {
-            printf("Get: %s\n",cmd.command);
-        } else if (strcmp(cmd.command, "set") == 0) {
-            printf("set: \n");
-        } else if (strcmp(cmd.command, "delete") == 0) {
-            printf("delete: %s\n", cmd.command);
-        } else {
-            printf("Unknown command: %s\n", cmd.command);
+        // handling input commands and prepare for execution
+        Statement statement;
+        switch (prepare_statement(cmd, &statement)) {
+          case (PREPARE_SUCCESS):
+            break;
+          case (PREPARE_UNRECOGNIZED_STATEMENT):
+            printf("Unknown command: %s\n", cmd->command);
+            continue;
+          case (PREPARE_SYNTAX_ERROR):
+            printf("Please check manual Sytax error occured");
         }
+
+        execute_statement(&statement);
+        printf("Executed.\n");
     }
 
     return 0;
