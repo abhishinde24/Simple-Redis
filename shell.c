@@ -31,7 +31,7 @@ typedef struct {
 void print_prompt() {
     printf("SimpleDB > ");
 }
-PrepareResult parse_command(Command* cmd,Statement* statement){
+PrepareResult prepare_set(Command* cmd,Statement* statement){
   char* keyword = strtok(cmd->command, " ");
   char* key = strtok(NULL, " ");
   char* value = strtok(NULL, " ");
@@ -47,22 +47,47 @@ PrepareResult parse_command(Command* cmd,Statement* statement){
   statement->value = int_value;
   return PREPARE_SUCCESS;  
 }
+
+PrepareResult prepare_get(Command* cmd,Statement* statement){
+  char* keyword = strtok(cmd->command, " ");
+  char* key = strtok(NULL, " ");
+
+  if(keyword == NULL || key == NULL){
+    return PREPARE_SYNTAX_ERROR;
+  }  
+
+  int32_t int_key = atoi(key);
+
+  statement->key = int_key;
+  return PREPARE_SUCCESS;  
+}
+
+PrepareResult prepare_delete(Command* cmd,Statement* statement){
+  char* keyword = strtok(cmd->command, " ");
+  char* key = strtok(NULL, " ");
+
+  if(keyword == NULL || key == NULL){
+    return PREPARE_SYNTAX_ERROR;
+  }  
+
+  int32_t int_key = atoi(key);
+
+  statement->key = int_key;
+  return PREPARE_SUCCESS;  
+}
+
 PrepareResult prepare_statement(Command* cmd,Statement* statement){
-    PrepareResult parse_result = parse_command(cmd,statement);
-    if(parse_result!=PREPARE_SUCCESS){
-       return parse_result; 
-    }
     if (strncmp(cmd->command, "GET", 3) == 0) {
         statement->type = STATEMENT_GET;
-        return PREPARE_SUCCESS;
+        return prepare_get(cmd,statement);;
     }
     if (strncmp(cmd->command, "SET",3) == 0) {
         statement->type = STATEMENT_SET;
-        return PREPARE_SUCCESS;
+        return prepare_set(cmd,statement);
     }
     if (strncmp(cmd->command,"DELETE",6) == 0){
         statement->type = STATEMENT_DELETE;
-        return PREPARE_SUCCESS;
+        return prepare_delete(cmd,statement);
     }
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
