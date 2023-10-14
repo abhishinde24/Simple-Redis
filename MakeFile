@@ -1,0 +1,2 @@
+db : shell.c
+	gcc -o shell shell.c hashtable.c
